@@ -71,7 +71,7 @@ export interface WebAuthnOptionsResponse {
   authenticators: PublicKeyCredentialDescriptorJSON[];
 }
 
-export type DefaultContext = AppLoadContext
+export type DefaultContext = AppLoadContext;
 
 /**
  * This interface declares what configuration the strategy needs from the
@@ -81,19 +81,26 @@ export interface WebAuthnOptions<User, Context = DefaultContext> {
   /**
    * Relaying Party name - The human-readable name of your app
    */
-  rpName: string | ((request: Request, context: Context) => Promise<string> | string);
+  rpName:
+    | string
+    | ((request: Request, context: Context) => Promise<string> | string);
   /**
    * Relaying Party ID -The hostname of the website, determines where passkeys can be used
    * @link https://www.w3.org/TR/webauthn-2/#relying-party-identifier
    */
-  rpID: string | ((request: Request, context: Context) => Promise<string> | string);
+  rpID:
+    | string
+    | ((request: Request, context: Context) => Promise<string> | string);
   /**
    * Website URL (or array of URLs) where the registration can occur
    */
   origin:
     | string
     | string[]
-    | ((request: Request, context: Context) => Promise<string | string[]> | string | string[]);
+    | ((
+        request: Request,
+        context: Context
+      ) => Promise<string | string[]> | string | string[]);
 
   /**
    * Session key to store the challenge in
@@ -125,7 +132,10 @@ export interface WebAuthnOptions<User, Context = DefaultContext> {
    * @param username
    * @returns User object
    */
-  getUserByUsername: (username: string, context: Context) => Promise<User | null> | User | null;
+  getUserByUsername: (
+    username: string,
+    context: Context
+  ) => Promise<User | null> | User | null;
   /**
    * Find an authenticator in the database by its credential ID
    * @param id
@@ -136,7 +146,7 @@ export interface WebAuthnOptions<User, Context = DefaultContext> {
     context: Context
   ) => Promise<Authenticator | null> | Authenticator | null;
 
-  crypto: Pick<Crypto, 'getRandomValues'>;
+  crypto: Pick<Crypto, "getRandomValues">;
 }
 
 /**
@@ -158,7 +168,10 @@ export class WebAuthnStrategy<User, Context = DefaultContext> extends Strategy<
   rpName: WebAuthnOptions<User, Context>["rpName"];
   rpID: WebAuthnOptions<User, Context>["rpID"];
   origin: WebAuthnOptions<User, Context>["origin"];
-  getUserAuthenticators: WebAuthnOptions<User, Context>["getUserAuthenticators"];
+  getUserAuthenticators: WebAuthnOptions<
+    User,
+    Context
+  >["getUserAuthenticators"];
   getUserDetails: WebAuthnOptions<User, Context>["getUserDetails"];
   getUserByUsername: WebAuthnOptions<User, Context>["getUserByUsername"];
   getAuthenticatorById: WebAuthnOptions<User, Context>["getAuthenticatorById"];
@@ -186,7 +199,9 @@ export class WebAuthnStrategy<User, Context = DefaultContext> extends Strategy<
           ? await this.rpName(request, context)
           : this.rpName,
       id:
-        typeof this.rpID === "function" ? await this.rpID(request, context) : this.rpID,
+        typeof this.rpID === "function"
+          ? await this.rpID(request, context)
+          : this.rpID,
       origin:
         typeof this.origin === "function"
           ? await this.origin(request, context)
@@ -264,8 +279,9 @@ export class WebAuthnStrategy<User, Context = DefaultContext> extends Strategy<
     try {
       let user: User | null = session.get(options.sessionKey) ?? null;
 
-      const rp = await this.getRP(request,
-        options.context as Context ?? {} as Context
+      const rp = await this.getRP(
+        request,
+        (options.context as Context) ?? ({} as Context)
       );
 
       if (request.method !== "POST")
@@ -332,7 +348,7 @@ export class WebAuthnStrategy<User, Context = DefaultContext> extends Strategy<
         const authenticationData = data as AuthenticationResponseJSON;
         const authenticator = await this.getAuthenticatorById(
           authenticationData.id,
-          options.context as Context ?? {} as Context
+          (options.context as Context) ?? ({} as Context)
         );
         if (!authenticator) throw new Error("Passkey not found.");
 
