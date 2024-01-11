@@ -1,16 +1,28 @@
 {
-  "name": "remix-auth-webauthn",
-  "version": "0.1.0",
+  "name": "@samialdury/remix-auth-webauthn",
+  "version": "1.0.0",
+  "description": "A Remix Auth strategy for signing in with Web Authentication passkeys",
   "main": "./build/index.js",
   "types": "./build/index.d.ts",
   "author": "Alex Anderson",
+  "contributors": [
+    {
+        "name": "Alex Anderson",
+        "url": "https://github.com/alexanderson1993"
+    },
+    {
+        "name": "Sami Al-Dury",
+        "url": "https://github.com/samialdury"
+    }
+  ],
   "type": "module",
   "repository": {
     "type": "git",
-    "url": "https://github.com/alexanderson1993/remix-auth-webauthn.git"
+    "url": "https://github.com/samialdury/remix-auth-webauthn.git"
   },
-  "bugs": "https://github.com/alexanderson1993/remix-auth-webauthn/issues",
-  "scripts": {
+  "bugs": "https://github.com/samialdury/remix-auth-webauthn/issues",
+  "homepage": "https://github.com/samialdury/remix-auth-webauthn#readme",
+  "scripts": {  
     "build": "tsc --project tsconfig.json && npx esbuild src/* --outdir=build --platform=node --format=esm",
     "typecheck": "tsc --project tsconfig.json --noEmit",
     "lint": "eslint --ext .ts,.tsx src/",
