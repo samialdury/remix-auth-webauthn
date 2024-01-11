@@ -147,22 +147,13 @@ export class WebAuthnStrategy<User> extends Strategy<
 > {
   name = "webauthn";
 
-  rpName: string | ((request: Request) => Promise<string> | string);
-  rpID: string | ((request: Request) => Promise<string> | string);
-  origin:
-    | string
-    | string[]
-    | ((request: Request) => Promise<string | string[]> | string | string[]);
-  getUserAuthenticators: (
-    user: User | null
-  ) => Promise<WebAuthnAuthenticator[]> | WebAuthnAuthenticator[];
-  getUserDetails: (
-    user: User | null
-  ) => Promise<UserDetails | null> | UserDetails | null;
-  getUserByUsername: (username: string) => Promise<User | null> | User | null;
-  getAuthenticatorById: (
-    id: string
-  ) => Promise<Authenticator | null> | Authenticator | null;
+  rpName: WebAuthnOptions<User>["rpName"];
+  rpID: WebAuthnOptions<User>["rpID"];
+  origin: WebAuthnOptions<User>["origin"];
+  getUserAuthenticators: WebAuthnOptions<User>["getUserAuthenticators"];
+  getUserDetails: WebAuthnOptions<User>["getUserDetails"];
+  getUserByUsername: WebAuthnOptions<User>["getUserByUsername"];
+  getAuthenticatorById: WebAuthnOptions<User>["getAuthenticatorById"];
 
   constructor(
     options: WebAuthnOptions<User>,
