@@ -157,6 +157,7 @@ export type WebAuthnVerifyParams = {
   authenticator: Omit<Authenticator, "userId">;
   type: "registration" | "authentication";
   username: string | null;
+  context: DefaultContext;
 };
 
 export class WebAuthnStrategy<User, Context = DefaultContext> extends Strategy<
@@ -340,6 +341,7 @@ export class WebAuthnStrategy<User, Context = DefaultContext> extends Strategy<
             authenticator: newAuthenticator,
             type: "registration",
             username,
+            context: (options.context ?? {}) as never,
           });
         } else {
           throw new Error("Passkey verification failed.");
@@ -376,6 +378,7 @@ export class WebAuthnStrategy<User, Context = DefaultContext> extends Strategy<
           authenticator,
           type: "authentication",
           username,
+          context: (options.context ?? {}) as never,
         });
       } else {
         throw new Error("Invalid verification type.");
