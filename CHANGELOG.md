@@ -1,3 +1,10 @@
+## [1.0.1](https://github.com/samialdury/remix-auth-webauthn/compare/v1.0.0...v1.0.1) (2024-01-11)
+
+
+### Bug Fixes
+
+* add `context` to `verify` function ([52f27b2](https://github.com/samialdury/remix-auth-webauthn/commit/52f27b21c5690d249caf5c1657f1b5a74854baa8))
+
 # 1.0.0 (2024-01-11)
 
 

@@ -1,6 +1,6 @@
 {
   "name": "@samialdury/remix-auth-webauthn",
-  "version": "1.0.0",
+  "version": "1.0.1",
   "description": "A Remix Auth strategy for signing in with Web Authentication passkeys",
   "main": "./build/index.js",
   "types": "./build/index.d.ts",
