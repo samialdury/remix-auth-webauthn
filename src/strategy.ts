@@ -2,6 +2,7 @@ import {
   json,
   type SessionStorage,
   type SessionData,
+  type AppLoadContext,
 } from "@remix-run/server-runtime";
 import {
   AuthenticateOptions,
@@ -70,27 +71,29 @@ export interface WebAuthnOptionsResponse {
   authenticators: PublicKeyCredentialDescriptorJSON[];
 }
 
+export type DefaultContext = AppLoadContext
+
 /**
  * This interface declares what configuration the strategy needs from the
  * developer to correctly work.
  */
-export interface WebAuthnOptions<User> {
+export interface WebAuthnOptions<User, Context = DefaultContext> {
   /**
    * Relaying Party name - The human-readable name of your app
    */
-  rpName: string | ((request: Request) => Promise<string> | string);
+  rpName: string | ((request: Request, context: Context) => Promise<string> | string);
   /**
    * Relaying Party ID -The hostname of the website, determines where passkeys can be used
    * @link https://www.w3.org/TR/webauthn-2/#relying-party-identifier
    */
-  rpID: string | ((request: Request) => Promise<string> | string);
+  rpID: string | ((request: Request, context: Context) => Promise<string> | string);
   /**
    * Website URL (or array of URLs) where the registration can occur
    */
   origin:
     | string
     | string[]
-    | ((request: Request) => Promise<string | string[]> | string | string[]);
+    | ((request: Request, context: Context) => Promise<string | string[]> | string | string[]);
 
   /**
    * Session key to store the challenge in
@@ -103,7 +106,8 @@ export interface WebAuthnOptions<User> {
    * @returns Authenticator
    */
   getUserAuthenticators: (
-    user: User | null
+    user: User | null,
+    context: Context
   ) => Promise<WebAuthnAuthenticator[]> | WebAuthnAuthenticator[];
   /**
    * Transform the user object into the shape expected by the strategy.
@@ -112,7 +116,8 @@ export interface WebAuthnOptions<User> {
    * @returns UserDetails
    */
   getUserDetails: (
-    user: User | null
+    user: User | null,
+    context: Context
   ) => Promise<UserDetails | null> | UserDetails | null;
 
   /**
@@ -120,14 +125,15 @@ export interface WebAuthnOptions<User> {
    * @param username
    * @returns User object
    */
-  getUserByUsername: (username: string) => Promise<User | null> | User | null;
+  getUserByUsername: (username: string, context: Context) => Promise<User | null> | User | null;
   /**
    * Find an authenticator in the database by its credential ID
    * @param id
    * @returns Authenticator
    */
   getAuthenticatorById: (
-    id: string
+    id: string,
+    context: Context
   ) => Promise<Authenticator | null> | Authenticator | null;
 }
 
@@ -141,22 +147,22 @@ export type WebAuthnVerifyParams = {
   username: string | null;
 };
 
-export class WebAuthnStrategy<User> extends Strategy<
+export class WebAuthnStrategy<User, Context = DefaultContext> extends Strategy<
   User,
   WebAuthnVerifyParams
 > {
   name = "webauthn";
 
-  rpName: WebAuthnOptions<User>["rpName"];
-  rpID: WebAuthnOptions<User>["rpID"];
-  origin: WebAuthnOptions<User>["origin"];
-  getUserAuthenticators: WebAuthnOptions<User>["getUserAuthenticators"];
-  getUserDetails: WebAuthnOptions<User>["getUserDetails"];
-  getUserByUsername: WebAuthnOptions<User>["getUserByUsername"];
-  getAuthenticatorById: WebAuthnOptions<User>["getAuthenticatorById"];
+  rpName: WebAuthnOptions<User, Context>["rpName"];
+  rpID: WebAuthnOptions<User, Context>["rpID"];
+  origin: WebAuthnOptions<User, Context>["origin"];
+  getUserAuthenticators: WebAuthnOptions<User, Context>["getUserAuthenticators"];
+  getUserDetails: WebAuthnOptions<User, Context>["getUserDetails"];
+  getUserByUsername: WebAuthnOptions<User, Context>["getUserByUsername"];
+  getAuthenticatorById: WebAuthnOptions<User, Context>["getAuthenticatorById"];
 
   constructor(
-    options: WebAuthnOptions<User>,
+    options: WebAuthnOptions<User, Context>,
     verify: StrategyVerifyCallback<User, WebAuthnVerifyParams>
   ) {
     super(verify);
@@ -169,17 +175,17 @@ export class WebAuthnStrategy<User> extends Strategy<
     this.getAuthenticatorById = options.getAuthenticatorById;
   }
 
-  async getRP(request: Request) {
+  async getRP(request: Request, context: Context) {
     const rp = {
       name:
         typeof this.rpName === "function"
-          ? await this.rpName(request)
+          ? await this.rpName(request, context)
           : this.rpName,
       id:
-        typeof this.rpID === "function" ? await this.rpID(request) : this.rpID,
+        typeof this.rpID === "function" ? await this.rpID(request, context) : this.rpID,
       origin:
         typeof this.origin === "function"
-          ? await this.origin(request)
+          ? await this.origin(request, context)
           : this.origin,
     };
 
@@ -189,7 +195,8 @@ export class WebAuthnStrategy<User> extends Strategy<
   async generateOptions(
     request: Request,
     sessionStorage: SessionStorage<SessionData, SessionData>,
-    user: User | null
+    user: User | null,
+    context: Context = {} as Context
   ) {
     let session = await sessionStorage.getSession(
       request.headers.get("Cookie")
@@ -199,19 +206,19 @@ export class WebAuthnStrategy<User> extends Strategy<
     let userDetails: UserDetails | null = null;
     let usernameAvailable: boolean | null = null;
 
-    const rp = await this.getRP(request);
+    const rp = await this.getRP(request, context);
 
     if (!user) {
       const username = new URL(request.url).searchParams.get("username");
       if (username) {
         usernameAvailable = true;
-        user = await this.getUserByUsername(username || "");
+        user = await this.getUserByUsername(username || "", context);
       }
     }
 
     if (user) {
-      authenticators = await this.getUserAuthenticators(user);
-      userDetails = await this.getUserDetails(user);
+      authenticators = await this.getUserAuthenticators(user, context);
+      userDetails = await this.getUserDetails(user, context);
       usernameAvailable = false;
     }
 
@@ -255,7 +262,9 @@ export class WebAuthnStrategy<User> extends Strategy<
     try {
       let user: User | null = session.get(options.sessionKey) ?? null;
 
-      const rp = await this.getRP(request);
+      const rp = await this.getRP(request,
+        options.context as Context ?? {} as Context
+      );
 
       if (request.method !== "POST")
         throw new Error("The WebAuthn strategy only supports POST requests.");
@@ -320,7 +329,8 @@ export class WebAuthnStrategy<User> extends Strategy<
       } else if (type === "authentication") {
         const authenticationData = data as AuthenticationResponseJSON;
         const authenticator = await this.getAuthenticatorById(
-          authenticationData.id
+          authenticationData.id,
+          options.context as Context ?? {} as Context
         );
         if (!authenticator) throw new Error("Passkey not found.");
 
