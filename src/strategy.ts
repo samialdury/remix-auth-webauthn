@@ -135,6 +135,8 @@ export interface WebAuthnOptions<User, Context = DefaultContext> {
     id: string,
     context: Context
   ) => Promise<Authenticator | null> | Authenticator | null;
+
+  crypto: Pick<Crypto, 'getRandomValues'>;
 }
 
 /**
@@ -160,6 +162,7 @@ export class WebAuthnStrategy<User, Context = DefaultContext> extends Strategy<
   getUserDetails: WebAuthnOptions<User, Context>["getUserDetails"];
   getUserByUsername: WebAuthnOptions<User, Context>["getUserByUsername"];
   getAuthenticatorById: WebAuthnOptions<User, Context>["getAuthenticatorById"];
+  crypto: WebAuthnOptions<User, Context>["crypto"];
 
   constructor(
     options: WebAuthnOptions<User, Context>,
@@ -173,6 +176,7 @@ export class WebAuthnStrategy<User, Context = DefaultContext> extends Strategy<
     this.getUserDetails = options.getUserDetails;
     this.getUserByUsername = options.getUserByUsername;
     this.getAuthenticatorById = options.getAuthenticatorById;
+    this.crypto = options.crypto;
   }
 
   async getRP(request: Request, context: Context) {
@@ -222,8 +226,6 @@ export class WebAuthnStrategy<User, Context = DefaultContext> extends Strategy<
       usernameAvailable = false;
     }
 
-    const crypto = await import("tiny-webcrypto");
-
     const options: WebAuthnOptionsResponse = {
       usernameAvailable,
       rp,
@@ -231,7 +233,7 @@ export class WebAuthnStrategy<User, Context = DefaultContext> extends Strategy<
         ? { displayName: userDetails.username, ...userDetails }
         : null,
       challenge: uint8ArrayToBase64Url(
-        crypto.default.getRandomValues(new Uint8Array(32))
+        this.crypto.getRandomValues(new Uint8Array(32))
       ),
       authenticators: authenticators.map(({ credentialID, transports }) => ({
         id: credentialID,
