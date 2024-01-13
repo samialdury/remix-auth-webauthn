@@ -1,3 +1,10 @@
+## [1.0.2](https://github.com/samialdury/remix-auth-webauthn/compare/v1.0.1...v1.0.2) (2024-01-13)
+
+
+### Bug Fixes
+
+* `context` should be optional ([aa517e3](https://github.com/samialdury/remix-auth-webauthn/commit/aa517e3dd4ceb0345c8be9aaa55121024b2b1487))
+
 ## [1.0.1](https://github.com/samialdury/remix-auth-webauthn/compare/v1.0.0...v1.0.1) (2024-01-11)
 
 
