@@ -71,26 +71,26 @@ export interface WebAuthnOptionsResponse {
   authenticators: PublicKeyCredentialDescriptorJSON[];
 }
 
-export type DefaultContext = AppLoadContext;
+export type Context = AppLoadContext | undefined;
 
 /**
  * This interface declares what configuration the strategy needs from the
  * developer to correctly work.
  */
-export interface WebAuthnOptions<User, Context = DefaultContext> {
+export interface WebAuthnOptions<User> {
   /**
    * Relaying Party name - The human-readable name of your app
    */
   rpName:
     | string
-    | ((request: Request, context: Context) => Promise<string> | string);
+    | ((request: Request, context?: Context) => Promise<string> | string);
   /**
    * Relaying Party ID -The hostname of the website, determines where passkeys can be used
    * @link https://www.w3.org/TR/webauthn-2/#relying-party-identifier
    */
   rpID:
     | string
-    | ((request: Request, context: Context) => Promise<string> | string);
+    | ((request: Request, context?: Context) => Promise<string> | string);
   /**
    * Website URL (or array of URLs) where the registration can occur
    */
@@ -99,7 +99,7 @@ export interface WebAuthnOptions<User, Context = DefaultContext> {
     | string[]
     | ((
         request: Request,
-        context: Context
+        context?: Context
       ) => Promise<string | string[]> | string | string[]);
 
   /**
@@ -114,7 +114,7 @@ export interface WebAuthnOptions<User, Context = DefaultContext> {
    */
   getUserAuthenticators: (
     user: User | null,
-    context: Context
+    context?: Context
   ) => Promise<WebAuthnAuthenticator[]> | WebAuthnAuthenticator[];
   /**
    * Transform the user object into the shape expected by the strategy.
@@ -124,7 +124,7 @@ export interface WebAuthnOptions<User, Context = DefaultContext> {
    */
   getUserDetails: (
     user: User | null,
-    context: Context
+    context?: Context
   ) => Promise<UserDetails | null> | UserDetails | null;
 
   /**
@@ -134,7 +134,7 @@ export interface WebAuthnOptions<User, Context = DefaultContext> {
    */
   getUserByUsername: (
     username: string,
-    context: Context
+    context?: Context
   ) => Promise<User | null> | User | null;
   /**
    * Find an authenticator in the database by its credential ID
@@ -143,10 +143,10 @@ export interface WebAuthnOptions<User, Context = DefaultContext> {
    */
   getAuthenticatorById: (
     id: string,
-    context: Context
+    context?: Context
   ) => Promise<Authenticator | null> | Authenticator | null;
 
-  crypto: Pick<Crypto, "getRandomValues">;
+  crypto?: Pick<Crypto, "getRandomValues"> | undefined;
 }
 
 /**
@@ -157,29 +157,28 @@ export type WebAuthnVerifyParams = {
   authenticator: Omit<Authenticator, "userId">;
   type: "registration" | "authentication";
   username: string | null;
-  context: DefaultContext;
+  context?: Context
 };
 
-export class WebAuthnStrategy<User, Context = DefaultContext> extends Strategy<
+export class WebAuthnStrategy<User> extends Strategy<
   User,
   WebAuthnVerifyParams
 > {
   name = "webauthn";
 
-  rpName: WebAuthnOptions<User, Context>["rpName"];
-  rpID: WebAuthnOptions<User, Context>["rpID"];
-  origin: WebAuthnOptions<User, Context>["origin"];
+  rpName: WebAuthnOptions<User>["rpName"];
+  rpID: WebAuthnOptions<User>["rpID"];
+  origin: WebAuthnOptions<User>["origin"];
   getUserAuthenticators: WebAuthnOptions<
-    User,
-    Context
+    User
   >["getUserAuthenticators"];
-  getUserDetails: WebAuthnOptions<User, Context>["getUserDetails"];
-  getUserByUsername: WebAuthnOptions<User, Context>["getUserByUsername"];
-  getAuthenticatorById: WebAuthnOptions<User, Context>["getAuthenticatorById"];
-  crypto: WebAuthnOptions<User, Context>["crypto"];
+  getUserDetails: WebAuthnOptions<User>["getUserDetails"];
+  getUserByUsername: WebAuthnOptions<User>["getUserByUsername"];
+  getAuthenticatorById: WebAuthnOptions<User>["getAuthenticatorById"];
+  crypto: WebAuthnOptions<User>["crypto"];
 
   constructor(
-    options: WebAuthnOptions<User, Context>,
+    options: WebAuthnOptions<User>,
     verify: StrategyVerifyCallback<User, WebAuthnVerifyParams>
   ) {
     super(verify);
@@ -193,7 +192,7 @@ export class WebAuthnStrategy<User, Context = DefaultContext> extends Strategy<
     this.crypto = options.crypto;
   }
 
-  async getRP(request: Request, context: Context) {
+  async getRP(request: Request, context?: Context) {
     const rp = {
       name:
         typeof this.rpName === "function"
@@ -216,7 +215,7 @@ export class WebAuthnStrategy<User, Context = DefaultContext> extends Strategy<
     request: Request,
     sessionStorage: SessionStorage<SessionData, SessionData>,
     user: User | null,
-    context: Context = {} as Context
+    context?: Context
   ) {
     let session = await sessionStorage.getSession(
       request.headers.get("Cookie")
@@ -249,7 +248,7 @@ export class WebAuthnStrategy<User, Context = DefaultContext> extends Strategy<
         ? { displayName: userDetails.username, ...userDetails }
         : null,
       challenge: uint8ArrayToBase64Url(
-        this.crypto.getRandomValues(new Uint8Array(32))
+        (this.crypto ?? crypto).getRandomValues(new Uint8Array(32))
       ),
       authenticators: authenticators.map(({ credentialID, transports }) => ({
         id: credentialID,
@@ -282,7 +281,7 @@ export class WebAuthnStrategy<User, Context = DefaultContext> extends Strategy<
 
       const rp = await this.getRP(
         request,
-        (options.context as Context) ?? ({} as Context)
+        options.context
       );
 
       if (request.method !== "POST")
@@ -341,7 +340,7 @@ export class WebAuthnStrategy<User, Context = DefaultContext> extends Strategy<
             authenticator: newAuthenticator,
             type: "registration",
             username,
-            context: (options.context ?? {}) as never,
+            context: options.context
           });
         } else {
           throw new Error("Passkey verification failed.");
@@ -350,7 +349,7 @@ export class WebAuthnStrategy<User, Context = DefaultContext> extends Strategy<
         const authenticationData = data as AuthenticationResponseJSON;
         const authenticator = await this.getAuthenticatorById(
           authenticationData.id,
-          (options.context as Context) ?? ({} as Context)
+          options.context
         );
         if (!authenticator) throw new Error("Passkey not found.");
 
@@ -378,7 +377,7 @@ export class WebAuthnStrategy<User, Context = DefaultContext> extends Strategy<
           authenticator,
           type: "authentication",
           username,
-          context: (options.context ?? {}) as never,
+          context: options.context
         });
       } else {
         throw new Error("Invalid verification type.");
