@@ -1,3 +1,15 @@
+# [2.0.0](https://github.com/samialdury/remix-auth-webauthn/compare/v1.0.2...v2.0.0) (2024-01-14)
+
+
+### Features
+
+* update dependencies (major) ([da9ae48](https://github.com/samialdury/remix-auth-webauthn/commit/da9ae481aff26258913e85f1e9c3786799906d11))
+
+
+### BREAKING CHANGES
+
+* update dependencies (major)
+
 ## [1.0.2](https://github.com/samialdury/remix-auth-webauthn/compare/v1.0.1...v1.0.2) (2024-01-13)
 
 
